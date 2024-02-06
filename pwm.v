@@ -148,3 +148,65 @@ module MotorControlModule(
     end
     
 endmodule
+
+
+
+
+
+
+
+
+
+// variable duty cycle 
+
+
+`timescale 1ns / 1ps
+
+module MotorControlModule(
+    input CLK100MHZ,             // Onboard 100MHz clock
+    input sw0, // Switch for enabling PWM output for motor
+    input sw2, sw3,              // Switches for Forward/Backward control
+    input sw6, sw7, sw8, sw9,    // Switches for setting duty cycles
+    output reg pwm_out1 = 0,     // PWM output signal for motor
+    output forward,              // Forward direction control
+    output backward,             // Backward direction control
+);
+
+    // Parameters for PWM
+    parameter PWM_PERIOD = 20_000; // PWM period - 5kHz
+    parameter BLINK_PERIOD = 100_000_000; // Blink period - about 1 second
+    
+    // Internal registers for PWM generation and LED blinking
+    reg [15:0] counter1 = 0; // Counter for PWM period
+    reg [31:0] blink_counter = 0; // Counter for blink LED
+    reg [7:0] DUTY_CYCLE = 25; // Duty cycle percentage, default is 25%
+
+    // Feedback LEDs mirror state of their corresponding switches
+    assign led_feedback_sw0 = sw0;
+    assign led_feedback_sw2 = sw2;
+    assign led_feedback_sw3 = sw3;
+    assign led_feedback_sw6 = sw6;
+    assign led_feedback_sw7 = sw7;
+    assign led_feedback_sw8 = sw8;
+    assign led_feedback_sw9 = sw9;
+
+    // PWM Generation logic for motor control
+    always @(posedge CLK100MHZ) begin
+        if (sw6) DUTY_CYCLE = 25;
+        else if (sw7) DUTY_CYCLE = 50;
+        else if (sw8) DUTY_CYCLE = 75;
+        else if (sw9) DUTY_CYCLE = 100;
+
+
+        counter1 <= (counter1 >= PWM_PERIOD - 1) ? 0 : counter1 + 1;
+        pwm_out1 <= (counter1 < (PWM_PERIOD * DUTY_CYCLE) / 100) ? 1 : 0;
+    end
+
+    // Blinking LED logic
+    always @(posedge CLK100MHZ) begin
+        blink_counter <= (blink_counter >= BLINK_PERIOD - 1) ? 0 : blink_counter + 1;
+        if(blink_counter == 0) begin
+            blink_led <= ~blink_led;
+        end
+    end
+endmodule
